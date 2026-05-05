@@ -1,459 +1,414 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-const taxDictionary = {
-  "ir-2": {
-    titulo: "IR-2 - Declaración Jurada de Sociedades",
-    definicion: "El IR-2 es la declaración jurada anual del Impuesto Sobre la Renta para sociedades en República Dominicana. Se utiliza para reportar ingresos, costos, gastos, utilidad fiscal, anticipos, retenciones, impuesto liquidado y, cuando aplique, impuesto sobre activos.",
-    categoria: "Declaraciones juradas",
-    entidad: "DGII"
+const sectors = [
+  {
+    key: "zona-franca",
+    title: "Zona Franca",
+    badge: "PRO",
+    description: "Régimen especial, exportación, ventas locales y reportes sectoriales.",
+    tags: ["RZF-01", "IT-1", "606/607", "IR-17", "TSS", "IR-2"]
   },
-  "ir2": {
-    titulo: "IR-2 - Declaración Jurada de Sociedades",
-    definicion: "El IR-2 es la declaración anual que presentan las sociedades ante la DGII para declarar sus resultados fiscales, determinar el ISR, aplicar anticipos, retenciones y validar si corresponde impuesto sobre activos.",
-    categoria: "Declaraciones juradas",
-    entidad: "DGII"
+  {
+    key: "empresa",
+    title: "Sociedad / Empresa",
+    badge: "PRO",
+    description: "Declaraciones juradas, ISR, ITBIS, e-NCF, retenciones y contabilidad.",
+    tags: ["IR-2", "IT-1", "IR-17", "606/607", "e-NCF"]
   },
-  "it-1": {
-    titulo: "IT-1 - Declaración mensual de ITBIS",
-    definicion: "El IT-1 permite reportar el ITBIS facturado, el ITBIS adelantado y el impuesto a pagar o saldo a favor del período.",
-    categoria: "Declaraciones juradas",
-    entidad: "DGII"
+  {
+    key: "persona-fisica",
+    title: "Persona Física",
+    badge: "FREE",
+    description: "IR-1, RST, ingresos, gastos, retenciones y obligaciones individuales.",
+    tags: ["IR-1", "RST", "ISR", "NCF"]
   },
-  "ir-3": {
-    titulo: "IR-3 - Retenciones de asalariados",
-    definicion: "El IR-3 es la declaración mensual utilizada para reportar y pagar las retenciones de ISR realizadas a empleados asalariados.",
-    categoria: "Nómina y retenciones",
-    entidad: "DGII"
-  },
-  "ir-4": {
-    titulo: "IR-4 - Relación anual de empleados",
-    definicion: "El IR-4 resume anualmente las remuneraciones pagadas a los empleados y las retenciones practicadas durante el año fiscal correspondiente.",
-    categoria: "Nómina y retenciones",
-    entidad: "DGII"
-  },
-  "ir-13": {
-    titulo: "IR-13 - Declaración anual de retenciones a asalariados",
-    definicion: "El IR-13 valida anualmente las retenciones realizadas a asalariados, comparando el ISR calculado contra el ISR retenido durante el año calendario.",
-    categoria: "Nómina y retenciones",
-    entidad: "DGII"
-  },
-  "tss": {
-    titulo: "TSS - Tesorería de la Seguridad Social",
-    definicion: "La TSS administra el recaudo de los aportes de seguridad social en República Dominicana, incluyendo AFP, ARS, SRL, INFOTEP y conceptos relacionados con la nómina.",
-    categoria: "Nómina y seguridad social",
-    entidad: "TSS"
-  },
-  "nomina": {
-    titulo: "Nómina",
-    definicion: "La nómina es el proceso mediante el cual una empresa calcula salarios, horas extras, bonificaciones, deducciones, aportes de seguridad social, retenciones de ISR y el pago neto a sus empleados.",
-    categoria: "Laboral / Contable",
-    entidad: "Empresa / TSS / DGII"
-  },
-  "itbis": {
-    titulo: "ITBIS - Impuesto a la Transferencia de Bienes Industrializados y Servicios",
-    definicion: "El ITBIS es el impuesto aplicado a la transferencia de bienes industrializados, importación de bienes y prestación de servicios gravados en República Dominicana.",
-    categoria: "Impuestos indirectos",
-    entidad: "DGII"
-  },
-  "isr": {
-    titulo: "ISR - Impuesto Sobre la Renta",
-    definicion: "El ISR grava las rentas, beneficios o utilidades obtenidas por personas físicas y jurídicas. En empresas se declara principalmente mediante el IR-2.",
-    categoria: "Impuestos directos",
-    entidad: "DGII"
+  {
+    key: "nomina",
+    title: "Nómina y TSS",
+    badge: "PRO",
+    description: "TSS, IR-3, IR-4, IR-13, novedades, retenciones y seguridad social.",
+    tags: ["TSS", "IR-3", "IR-4", "IR-13"]
   }
-};
+];
 
 const modules = [
   {
-    key: "ir-2",
-    title: "IR-2",
-    subtitle: "Declaración Jurada Anual de Sociedades",
-    description: "Formulario utilizado por las sociedades para declarar sus operaciones fiscales del año, determinar el ISR, anticipos, retenciones y validar el impuesto sobre activos cuando aplique."
+    key: "ir-3",
+    title: "IR-3",
+    type: "Retenciones",
+    section: "Nómina",
+    definition: "Declaración mensual usada para reportar y pagar las retenciones de ISR realizadas a empleados asalariados.",
+    checklist: ["Nómina cerrada", "ISR retenido validado", "Cruce con TSS", "Declaración enviada"],
+    errors: ["No actualizar novedades", "Usar base salarial incorrecta", "No conciliar nómina vs TSS"]
   },
   {
     key: "it-1",
     title: "IT-1",
-    subtitle: "Declaración mensual de ITBIS",
-    description: "Permite reportar el ITBIS facturado, ITBIS adelantado, operaciones gravadas, exentas y el saldo a pagar o a favor."
+    type: "ITBIS",
+    section: "DGII",
+    definition: "Declaración mensual para reportar ITBIS facturado, ITBIS adelantado, operaciones gravadas, exentas y saldo a pagar o a favor.",
+    checklist: ["Ventas conciliadas", "NCF revisados", "Compras válidas", "Notas de crédito aplicadas"],
+    errors: ["Declarar ventas diferentes", "Tomar ITBIS sin soporte", "No aplicar notas de crédito"]
   },
   {
-    key: "ir-3",
-    title: "IR-3",
-    subtitle: "Retenciones mensuales a asalariados",
-    description: "Declaración mensual de las retenciones de ISR aplicadas a empleados según la nómina reportada."
+    key: "ir-13",
+    title: "IR-13",
+    type: "Nómina",
+    section: "Nómina",
+    definition: "Declaración anual que valida retenciones a asalariados, comparando ISR calculado contra ISR retenido durante el año calendario.",
+    checklist: ["Acumulado anual validado", "ISR calculado vs retenido", "Empleados con doble empleador revisados"],
+    errors: ["Diferencias por períodos", "No rectificar IR-3/TSS", "No validar agente principal"]
+  },
+  {
+    key: "ir-17",
+    title: "IR-17",
+    type: "Retenciones",
+    section: "DGII",
+    definition: "Declaración de otras retenciones, incluyendo retenciones a proveedores, profesionales, alquileres u otros pagos sujetos a retención.",
+    checklist: ["Retenciones por comprobante", "Beneficiarios validados", "Pago dentro del plazo"],
+    errors: ["Aplicar porcentaje incorrecto", "No conciliar auxiliares", "Declarar fuera de plazo"]
+  },
+  {
+    key: "ir-2",
+    title: "IR-2",
+    type: "Renta",
+    section: "DGII",
+    definition: "Declaración jurada anual de sociedades para declarar resultados fiscales, ISR, anticipos, retenciones e impuesto sobre activos cuando aplique.",
+    checklist: ["Estados financieros cerrados", "Conciliación fiscal", "Anticipos y retenciones", "Activos revisados"],
+    errors: ["No conciliar ingresos", "Gastos sin soporte", "Confundir impuesto liquidado con pago final"]
+  },
+  {
+    key: "ir-1",
+    title: "IR-1",
+    type: "Renta",
+    section: "Persona Física",
+    definition: "Declaración jurada de personas físicas para declarar ingresos, gastos admitidos, retenciones, anticipos e ISR correspondiente.",
+    checklist: ["Ingresos identificados", "Gastos soportados", "Retenciones validadas"],
+    errors: ["Omitir ingresos", "Tomar gastos no admitidos", "No aplicar retenciones"]
   },
   {
     key: "tss",
     title: "TSS",
-    subtitle: "Seguridad Social y Nómina",
-    description: "Gestión de aportes de seguridad social, novedades, dependientes, salario cotizable y pagos mensuales."
+    type: "Seguridad Social",
+    section: "Nómina",
+    definition: "Sistema de recaudo de aportes de seguridad social, incluyendo AFP, ARS, SRL, INFOTEP y novedades de empleados.",
+    checklist: ["Altas y bajas", "Cambios salariales", "Factura conciliada", "Pago realizado"],
+    errors: ["No reportar bajas", "Diferencias con nómina", "Salario cotizable incorrecto"]
+  },
+  {
+    key: "606-607",
+    title: "606/607",
+    type: "Reportes",
+    section: "DGII",
+    definition: "Reportes de compras y ventas usados para sustentar operaciones fiscales y cruzar información con declaraciones mensuales.",
+    checklist: ["Comprobantes válidos", "NCF conciliados", "Totales cruzados con IT-1"],
+    errors: ["NCF inválidos", "Diferencias con contabilidad", "Duplicidad de registros"]
   }
 ];
 
-const proContentByModule = {
-  "ir-2": {
-    ejemplos: [
-      "Empresa con utilidad fiscal: ingresos gravados menos costos y gastos admitidos determinan la renta neta imponible.",
-      "Empresa con impuesto sobre activos mayor al ISR: se evalúa la diferencia a pagar según corresponda.",
-      "Sociedad con retenciones y anticipos: estos valores se cruzan contra el impuesto liquidado para determinar el saldo final."
-    ],
-    checklist: [
-      "Estados financieros cerrados y conciliados.",
-      "Ingresos comparados contra NCF emitidos y reportes fiscales.",
-      "Costos y gastos sustentados con comprobantes válidos.",
-      "Retenciones recibidas verificadas.",
-      "Anticipos pagados conciliados.",
-      "Activos revisados para validar impuesto sobre activos.",
-      "Conciliación fiscal preparada.",
-      "Anexos completados antes del envío."
-    ],
-    erroresFrecuentes: [
-      "No conciliar ingresos contables con reportes fiscales.",
-      "Registrar gastos sin comprobantes válidos.",
-      "No considerar anticipos o retenciones disponibles.",
-      "Confundir impuesto liquidado con impuesto efectivamente a pagar.",
-      "No revisar el impuesto sobre activos cuando aplica."
-    ],
-    guiaPasoAPaso: [
-      "Cerrar la contabilidad del período.",
-      "Preparar estados financieros.",
-      "Realizar conciliación fiscal.",
-      "Validar ingresos, costos, gastos, retenciones y anticipos.",
-      "Completar anexos del IR-2.",
-      "Revisar impuesto liquidado, saldos a favor o diferencias a pagar.",
-      "Enviar declaración y guardar acuse."
-    ]
-  },
-  "it-1": {
-    ejemplos: [
-      "Si el ITBIS facturado es mayor que el ITBIS adelantado, se genera impuesto a pagar.",
-      "Si el ITBIS adelantado supera el facturado, puede generarse saldo a favor."
-    ],
-    checklist: [
-      "Ventas del mes conciliadas.",
-      "NCF emitidos revisados.",
-      "Compras con comprobantes válidos verificadas.",
-      "Notas de crédito aplicadas correctamente.",
-      "Saldo a favor anterior validado."
-    ],
-    erroresFrecuentes: [
-      "Declarar ventas diferentes a los comprobantes emitidos.",
-      "Tomar ITBIS adelantado sin soporte válido.",
-      "No aplicar correctamente notas de crédito."
-    ],
-    guiaPasoAPaso: [
-      "Conciliar ventas.",
-      "Validar compras.",
-      "Revisar ITBIS facturado y adelantado.",
-      "Aplicar saldos a favor si existen.",
-      "Enviar declaración y guardar constancia."
-    ]
-  },
-  "ir-3": {
-    ejemplos: [
-      "Empleado con salario gravado: se calcula ISR según la escala anual prorrateada mensualmente.",
-      "Empleado con otro agente de retención: puede requerir validación especial para evitar diferencias en IR-13."
-    ],
-    checklist: [
-      "Nómina del mes cerrada.",
-      "Salarios, bonificaciones y deducciones revisadas.",
-      "ISR retenido validado.",
-      "Cruce contra TSS revisado.",
-      "Declaración enviada y pagada."
-    ],
-    erroresFrecuentes: [
-      "No actualizar novedades de empleados.",
-      "Calcular ISR sobre una base incorrecta.",
-      "No conciliar nómina, TSS e IR-3."
-    ],
-    guiaPasoAPaso: [
-      "Cerrar nómina.",
-      "Validar salarios gravados.",
-      "Calcular retenciones.",
-      "Comparar contra TSS.",
-      "Presentar IR-3."
-    ]
-  },
-  "tss": {
-    ejemplos: [
-      "Ingreso de empleado nuevo: debe registrarse oportunamente para que cotice correctamente.",
-      "Cambio salarial: debe actualizarse para que los aportes se calculen sobre la base correcta."
-    ],
-    checklist: [
-      "Altas y bajas actualizadas.",
-      "Cambios salariales registrados.",
-      "Dependientes revisados.",
-      "Factura TSS conciliada con nómina.",
-      "Pago realizado dentro del plazo."
-    ],
-    erroresFrecuentes: [
-      "No reportar salida de empleados a tiempo.",
-      "Diferencias entre nómina y salario cotizable.",
-      "No validar novedades antes de generar factura."
-    ],
-    guiaPasoAPaso: [
-      "Actualizar novedades.",
-      "Validar nómina.",
-      "Generar factura.",
-      "Conciliar valores.",
-      "Realizar pago."
-    ]
-  }
+const forms = ["IR-1", "IR-2", "IR-3", "IR-4", "IR-13", "IR-17", "IT-1", "RST", "RZF-01", "606", "607", "608"];
+
+const cycleItems = [
+  "Registrar operaciones",
+  "Emitir o recibir NCF/e-NCF",
+  "Conciliar contabilidad vs reportes",
+  "Preparar declaraciones",
+  "Validar saldos, anticipos y retenciones",
+  "Enviar y guardar acuse"
+];
+
+const dictionary = {
+  impuesto: "Un impuesto es una obligación tributaria exigida por el Estado para financiar el gasto público. Puede ser directo, como el ISR, o indirecto, como el ITBIS.",
+  itbis: "El ITBIS grava la transferencia de bienes industrializados, importación de bienes y prestación de servicios gravados.",
+  isr: "El ISR grava las rentas, beneficios o utilidades obtenidas por personas físicas y jurídicas.",
+  activo: "Un activo es un recurso controlado por una entidad del cual se esperan beneficios económicos futuros.",
+  pasivo: "Un pasivo es una obligación presente que implicará una salida futura de recursos.",
+  liquidez: "La liquidez mide la capacidad de una empresa para cumplir obligaciones de corto plazo.",
+  nomina: "La nómina calcula salarios, deducciones, aportes, retenciones y pago neto de empleados.",
+  retencion: "Una retención es un monto descontado para ser declarado y pagado a la administración tributaria."
 };
 
-function normalizeText(text = "") {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9 -]/g, "")
-    .trim();
+function normalize(text = "") {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s-]/g, "").trim();
 }
 
-function findDictionaryAnswer(question) {
-  const normalizedQuestion = normalizeText(question);
-
-  for (const [key, value] of Object.entries(taxDictionary)) {
-    const normalizedKey = normalizeText(key);
-    const normalizedTitle = normalizeText(value.titulo);
-
-    if (normalizedQuestion.includes(normalizedKey) || normalizedQuestion.includes(normalizedTitle)) {
-      return value;
-    }
+function localAnswer(question) {
+  const q = normalize(question);
+  const module = modules.find((m) => q.includes(normalize(m.key)) || q.includes(normalize(m.title)));
+  if (module) {
+    return `${module.title} - ${module.type}\n\n${module.definition}\n\nChecklist:\n- ${module.checklist.join("\n- ")}\n\nErrores frecuentes:\n- ${module.errors.join("\n- ")}\n\nEsta respuesta es orientativa y no sustituye una consulta formal con la DGII, TSS o un asesor especializado.`;
   }
-
+  const term = Object.keys(dictionary).find((key) => q.includes(normalize(key)));
+  if (term) {
+    return `${term.toUpperCase()}\n\n${dictionary[term]}\n\nEsta respuesta es orientativa y no sustituye una consulta formal con la DGII, TSS o un asesor especializado.`;
+  }
   return null;
 }
 
-async function askTaxAI(question) {
+async function askAI(question) {
   try {
     const response = await fetch("/api/tax-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question })
     });
-
     if (!response.ok) throw new Error("AI request failed");
-
     const data = await response.json();
     return data.answer;
-  } catch (error) {
-    return "No pude generar una respuesta con IA en este momento. Verifica que el endpoint /api/tax-ai esté conectado correctamente. Esta respuesta es orientativa y no sustituye una consulta formal con la DGII, TSS o un asesor especializado.";
+  } catch {
+    return "No pude generar una respuesta con IA en este momento. Verifica la conexión del endpoint /api/tax-ai.";
   }
 }
 
-async function getTaxChatResponse(question) {
-  const dictionaryAnswer = findDictionaryAnswer(question);
-
-  if (dictionaryAnswer) {
-    return {
-      source: "Diccionario tributario",
-      answer:
-        dictionaryAnswer.titulo +
-        "\n\n" +
-        dictionaryAnswer.definicion +
-        "\n\nCategoría: " +
-        dictionaryAnswer.categoria +
-        "\nEntidad relacionada: " +
-        dictionaryAnswer.entidad +
-        "\n\nEsta respuesta es orientativa y no sustituye una consulta formal con la DGII, TSS o un asesor especializado."
-    };
-  }
-
-  const aiAnswer = await askTaxAI(question);
-  return { source: "IA tributaria", answer: aiAnswer };
-}
-
-function TaxChat() {
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      text: "Hola. Soy tu chat tributario y financiero. Puedes preguntarme sobre DGII, TSS, nómina, ITBIS, ISR, IR-2, IR-3, IR-13, contabilidad o finanzas.",
-      source: "Sistema"
-    }
-  ]);
-  const [loading, setLoading] = useState(false);
-
-  async function handleSend() {
-    if (!question.trim()) return;
-
-    const userQuestion = question.trim();
-    setMessages((prev) => [...prev, { role: "user", text: userQuestion }]);
-    setQuestion("");
-    setLoading(true);
-
-    const response = await getTaxChatResponse(userQuestion);
-    setMessages((prev) => [...prev, { role: "assistant", text: response.answer, source: response.source }]);
-    setLoading(false);
-  }
-
+function Header({ isPro }) {
   return (
-    <section className="rounded-2xl border bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-slate-900">Chat tributario con IA</h2>
-        <p className="text-sm text-slate-600">
-          Responde desde el diccionario interno y, si no encuentra el término, consulta IA.
-        </p>
+    <div className="rounded-b-[34px] bg-slate-950 px-7 pb-8 pt-8 text-white shadow-sm">
+      <div className="flex items-center gap-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-2xl font-black text-slate-950">
+          AT
+        </div>
+        <div className="flex-1">
+          <h1 className="text-3xl font-black leading-tight">Asistente Tributario RD</h1>
+          <p className="mt-1 text-sm text-slate-300">Chanel4428@hotmail.com · {isPro ? "PRO" : "FREE"}</p>
+        </div>
+        <span className="text-3xl">⭐</span>
       </div>
 
-      <div className="mb-4 max-h-96 space-y-3 overflow-y-auto rounded-xl bg-slate-50 p-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={
-              "rounded-xl p-3 text-sm whitespace-pre-line " +
-              (msg.role === "user"
-                ? "ml-auto max-w-[85%] bg-slate-900 text-white"
-                : "mr-auto max-w-[90%] bg-white text-slate-800 border")
-            }
-          >
-            <p>{msg.text}</p>
-            {msg.source && msg.role === "assistant" && (
-              <small className="mt-2 block text-xs text-slate-500">Fuente: {msg.source}</small>
-            )}
-          </div>
-        ))}
-        {loading && <p className="text-sm text-slate-500">Generando respuesta...</p>}
+      <div className="mt-6 flex items-center rounded-3xl bg-slate-800 px-5 py-4 text-slate-300">
+        <span className="mr-3 text-xl">🔎</span>
+        <span>Ej: ¿Cómo rectifico un IR-3?</span>
       </div>
-
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ej.: ¿Qué es impuesto sobre activos?"
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
-        <button
-          onClick={handleSend}
-          className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-700"
-        >
-          Enviar
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function ContentList({ title, items, ordered = false }) {
-  const ListTag = ordered ? "ol" : "ul";
-  return (
-    <section className="mt-4">
-      <h4 className="font-semibold text-slate-900">{title}</h4>
-      <ListTag className={(ordered ? "list-decimal" : "list-disc") + " mt-2 space-y-1 pl-5 text-sm text-slate-700"}>
-        {items.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ListTag>
-    </section>
-  );
-}
-
-function ProModuleContent({ moduleKey, isProUser }) {
-  const content = proContentByModule[moduleKey];
-  if (!content) return null;
-
-  if (!isProUser) {
-    return (
-      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-        <h3 className="text-lg font-bold text-amber-900">Contenido Pro disponible</h3>
-        <p className="mt-1 text-sm text-amber-800">
-          Activa Pro para ver ejemplos prácticos, checklist, errores frecuentes y guía paso a paso.
-        </p>
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-900">
-          <li>Ejemplos prácticos</li>
-          <li>Checklist de revisión</li>
-          <li>Errores frecuentes</li>
-          <li>Guía paso a paso</li>
-        </ul>
-        <button className="mt-4 rounded-xl bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800">
-          Activar Pro
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-      <h3 className="text-lg font-bold text-emerald-950">Contenido Pro</h3>
-      <ContentList title="Ejemplos prácticos" items={content.ejemplos} />
-      <ContentList title="Checklist" items={content.checklist} />
-      <ContentList title="Errores frecuentes" items={content.erroresFrecuentes} />
-      <ContentList title="Guía paso a paso" items={content.guiaPasoAPaso} ordered />
     </div>
   );
 }
 
-function ModuleExplorer({ isProUser }) {
-  const [selectedModule, setSelectedModule] = useState(modules[0].key);
-  const module = modules.find((item) => item.key === selectedModule);
+function Home({ sector, setSector, selectedModule, setSelectedModule }) {
+  const activeSector = sectors.find((s) => s.key === sector) || sectors[0];
 
   return (
-    <section className="rounded-2xl border bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-slate-900">Módulos tributarios</h2>
-        <p className="text-sm text-slate-600">
-          Selecciona un módulo y visualiza su definición y contenido Pro sin tener que bajar al final.
-        </p>
-      </div>
+    <div className="space-y-7 px-5 py-6">
+      <section className="rounded-[28px] bg-rose-50 p-6">
+        <h2 className="text-2xl font-black text-slate-950">Tu guía tributaria diaria</h2>
+        <p className="mt-6 text-xl leading-8 text-slate-500">Formularios, vencimientos, TSS, sectores y casos prácticos.</p>
+      </section>
 
-      <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-4">
-        {modules.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setSelectedModule(item.key)}
-            className={
-              "rounded-xl border px-4 py-3 text-left text-sm transition " +
-              (selectedModule === item.key
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "bg-white text-slate-700 hover:bg-slate-50")
-            }
-          >
-            <strong className="block">{item.title}</strong>
-            <span className="text-xs opacity-80">{item.subtitle}</span>
-          </button>
-        ))}
-      </div>
+      <section>
+        <h2 className="text-3xl font-black text-slate-950">Inicio</h2>
 
-      {module && (
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <h3 className="text-2xl font-bold text-slate-900">{module.title}</h3>
-          <p className="mt-1 font-medium text-slate-700">{module.subtitle}</p>
-          <p className="mt-3 text-sm leading-6 text-slate-700">{module.description}</p>
-          <ProModuleContent moduleKey={module.key} isProUser={isProUser} />
+        <div className="mt-5 rounded-[28px] border bg-white p-6">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-2xl font-black text-slate-950">Sector activo: {activeSector.title}</h3>
+            <span className="rounded-full bg-emerald-100 px-4 py-2 font-bold text-emerald-700">{activeSector.badge}</span>
+          </div>
+          <p className="mt-5 text-lg leading-7 text-slate-500">{activeSector.description}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {activeSector.tags.map((tag) => (
+              <span key={tag} className="rounded-full bg-slate-100 px-4 py-2 font-bold text-slate-600">{tag}</span>
+            ))}
+          </div>
         </div>
-      )}
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {sectors.map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setSector(s.key)}
+              className={"rounded-2xl px-4 py-4 text-left font-bold " + (sector === s.key ? "bg-slate-950 text-white" : "bg-white text-slate-700 border")}
+            >
+              {s.title}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-black text-slate-950">Módulos rápidos</h2>
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          {modules.slice(0, 6).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setSelectedModule(m.key)}
+              className={"min-h-28 rounded-3xl p-5 text-left " + (selectedModule === m.key ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-950")}
+            >
+              <strong className="text-xl">{m.title}</strong>
+              <span className="block text-base opacity-80">{m.type}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <ModuleDetail selectedModule={selectedModule} />
+    </div>
+  );
+}
+
+function ModuleDetail({ selectedModule }) {
+  const module = modules.find((m) => m.key === selectedModule) || modules[0];
+  return (
+    <section className="rounded-[28px] bg-white p-6 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-3xl font-black text-slate-950">{module.title}</h2>
+          <p className="mt-1 text-lg font-semibold text-slate-600">{module.type}</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-4 py-2 font-bold text-slate-600">{module.section}</span>
+      </div>
+      <p className="mt-5 text-lg leading-8 text-slate-600">{module.definition}</p>
+
+      <div className="mt-6 rounded-3xl bg-emerald-50 p-5">
+        <h3 className="text-xl font-black text-emerald-950">Checklist Pro</h3>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-700">
+          {module.checklist.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      </div>
+
+      <div className="mt-4 rounded-3xl bg-amber-50 p-5">
+        <h3 className="text-xl font-black text-amber-950">Errores frecuentes</h3>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-700">
+          {module.errors.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      </div>
     </section>
   );
 }
 
-export default function App() {
-  const [isProUser, setIsProUser] = useState(true);
+function Chat() {
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "assistant", text: "Hola. Pregúntame sobre DGII, TSS, nómina, declaraciones, contabilidad o finanzas.", source: "Sistema" }
+  ]);
+
+  async function send() {
+    if (!question.trim()) return;
+    const q = question.trim();
+    setMessages((prev) => [...prev, { role: "user", text: q }]);
+    setQuestion("");
+    setLoading(true);
+    const local = localAnswer(q);
+    const answer = local || await askAI(q);
+    setMessages((prev) => [...prev, { role: "assistant", text: answer, source: local ? "Diccionario" : "IA" }]);
+    setLoading(false);
+  }
 
   return (
-    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Asistente Tributario RD</h1>
-              <p className="mt-2 text-sm text-slate-300">
-                Diccionario, módulos fiscales y chat con IA para temas tributarios, contables y financieros.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsProUser((prev) => !prev)}
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900"
-            >
-              Vista actual: {isProUser ? "Usuario Pro" : "Usuario Gratis"}
-            </button>
+    <div className="px-5 py-6">
+      <h2 className="text-3xl font-black text-slate-950">Chat</h2>
+      <div className="mt-5 max-h-[520px] space-y-3 overflow-y-auto rounded-[28px] bg-white p-4">
+        {messages.map((m, i) => (
+          <div key={i} className={"whitespace-pre-line rounded-3xl p-4 text-base leading-7 " + (m.role === "user" ? "ml-auto bg-slate-950 text-white" : "mr-auto bg-slate-100 text-slate-800")}>
+            {m.text}
+            {m.role === "assistant" && <small className="mt-2 block text-xs text-slate-500">Fuente: {m.source}</small>}
           </div>
-        </header>
-
-        <ModuleExplorer isProUser={isProUser} />
-        <TaxChat />
+        ))}
+        {loading && <p className="text-slate-500">Generando respuesta...</p>}
       </div>
+      <div className="mt-4 flex gap-2">
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send()}
+          placeholder="Ej.: ¿Qué es el ITBIS?"
+          className="flex-1 rounded-3xl border px-5 py-4 outline-none"
+        />
+        <button onClick={send} className="rounded-3xl bg-slate-950 px-6 py-4 font-bold text-white">Enviar</button>
+      </div>
+    </div>
+  );
+}
+
+function Forms() {
+  return (
+    <div className="px-5 py-6">
+      <h2 className="text-3xl font-black text-slate-950">Forms</h2>
+      <div className="mt-5 grid grid-cols-3 gap-4">
+        {forms.map((f) => (
+          <div key={f} className="rounded-3xl bg-white p-5 text-center text-xl font-black shadow-sm">{f}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Cycle() {
+  return (
+    <div className="px-5 py-6">
+      <h2 className="text-3xl font-black text-slate-950">Ciclo fiscal</h2>
+      <div className="mt-5 space-y-3">
+        {cycleItems.map((item, i) => (
+          <div key={item} className="rounded-3xl bg-white p-5 shadow-sm">
+            <strong className="mr-3 rounded-full bg-slate-950 px-3 py-2 text-white">{i + 1}</strong>
+            <span className="text-lg font-semibold text-slate-700">{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function More() {
+  const terms = Object.keys(dictionary);
+  return (
+    <div className="px-5 py-6">
+      <h2 className="text-3xl font-black text-slate-950">Más</h2>
+      <section className="mt-5 rounded-[28px] bg-white p-6 shadow-sm">
+        <h3 className="text-2xl font-black">Diccionario</h3>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {terms.map((t) => (
+            <span key={t} className="rounded-full bg-slate-100 px-4 py-2 font-semibold text-slate-600">{t}</span>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BottomNav({ tab, setTab }) {
+  const tabs = [
+    ["home", "🏠", "Inicio"],
+    ["chat", "💬", "Chat"],
+    ["forms", "💼", "Forms"],
+    ["cycle", "✅", "Ciclo"],
+    ["more", "☰", "Más"]
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t bg-white px-4 py-3">
+      <div className="mx-auto grid max-w-3xl grid-cols-5 gap-2">
+        {tabs.map(([key, icon, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={"rounded-3xl px-3 py-3 text-center font-bold " + (tab === key ? "bg-slate-950 text-white" : "text-slate-500")}
+          >
+            <span className="block text-2xl">{icon}</span>
+            <span className="text-sm">{label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+export default function App() {
+  const [tab, setTab] = useState("home");
+  const [sector, setSector] = useState("zona-franca");
+  const [selectedModule, setSelectedModule] = useState("ir-3");
+  const isPro = true;
+
+  const content = useMemo(() => {
+    if (tab === "chat") return <Chat />;
+    if (tab === "forms") return <Forms />;
+    if (tab === "cycle") return <Cycle />;
+    if (tab === "more") return <More />;
+    return <Home sector={sector} setSector={setSector} selectedModule={selectedModule} setSelectedModule={setSelectedModule} />;
+  }, [tab, sector, selectedModule]);
+
+  return (
+    <main className="min-h-screen bg-slate-50 pb-28">
+      <Header isPro={isPro} />
+      {content}
+      <BottomNav tab={tab} setTab={setTab} />
     </main>
   );
 }
